@@ -1,0 +1,68 @@
+name: Test and Deploy
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '22'
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Run tests
+      run: npm run check > test-results.txt 2>&1 || true
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-results
+        path: test-results.txt
+
+  deploy:
+    needs: test
+    runs-on: ostad-runner #self-hosted
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Download test results
+      uses: actions/download-artifact@v3
+      with:
+        name: test-results
+
+    - name: Display test results
+      run: |
+        echo "Test results:"
+        cat test-results.txt
+
+    - name: Pull latest code
+      run: |
+        cd ~/my-node-app  # path on your self-hosted runner
+        git reset --hard
+        git pull origin main
+
+    - name: Install dependencies
+      run: |
+        cd ~/my-node-app
+        npm install
+
+    - name: Restart app with PM2
+      run: |
+        cd ~/my-node-app
+        pm2 reload node-app || pm2 start "./src/server.js" --name node-app
+        pm2 save
+       
