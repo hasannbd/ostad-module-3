@@ -33,7 +33,7 @@ jobs:
 
   deploy:
     needs: test
-    runs-on: ostad-runner #self-hosted-runner
+    runs-on: ostad-runner #self-hosted
     
     steps:
     - name: Checkout code
